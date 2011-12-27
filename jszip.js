@@ -125,6 +125,8 @@ JSZip.prototype.add = function(name, data, o)
    header += this.decToHex(name.length, 2);
    // extra field length
    header += "\x00\x00";
+   
+   console.log(header);
 
    // file name
 
@@ -457,6 +459,8 @@ var JSZipBase64 = function() {
             }
 
          }
+         
+         console.log("decode", output);
 
          return output;
 
