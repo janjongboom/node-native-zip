@@ -65,7 +65,7 @@ var Zip = function () {
             header.writeInt16(dt.time);
             header.writeInt16(dt.date);
             // crc32
-            header.writeInt32(crc32(file.data));
+            header.writeInt32(crc32(compressedData));
             // compressed size
             header.writeInt32(compressedData.length);
             // uncompressed size

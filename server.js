@@ -20,6 +20,7 @@ var fs = require("fs");
     var archive = new zip();
     archive.add("smile.txt", new Buffer("Smile!", "utf8"));
     var buff = archive.toBuffer();
+    
     fs.writeFile("./test_new.zip", buff, function () {
         console.log("im too");
     });

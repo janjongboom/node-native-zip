@@ -314,6 +314,7 @@ JSZip.compressions = {
    "STORE" : {
       magic : "\x00\x00",
       compress : function (content) {
+          console.log(content);
          return content; // no compression
       }
    }
