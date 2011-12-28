@@ -101,7 +101,6 @@ var Zip = function () {
                 var fileHeader = getFileHeader(file, zipMethod.indicator, data);
                             
                 // write files
-                console.log(fileHeader.length)
                 var fileBuffer = new RollingBuffer(4 + fileHeader.length + file.name.length + data.length);
                 writeBytes(fileBuffer, [0x50, 0x4b, 0x03, 0x04]); // 4
                 fileBuffer.appendBuffer(fileHeader); // hmm...
@@ -132,8 +131,6 @@ var Zip = function () {
             var totalDirLength = getTotalBufLength(dirBuffers);
             var totalFileLength = getTotalBufLength(fileBuffers);
             
-            console.log(totalDirLength, totalFileLength);
-            
             var dirEnd = new RollingBuffer(8 + 2 + 2 + 4 + 4 + 2);
             writeBytes(dirEnd, [0x50, 0x4b, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00]);
             // total number of entries
@@ -151,7 +148,7 @@ var Zip = function () {
             dirBuffers.forEach(function (b) { buffer.appendBuffer(b); });
             buffer.appendBuffer(dirEnd);
             
-            return buffer.buf;
+            return buffer.getInternalBuffer();
         }
         
         return {

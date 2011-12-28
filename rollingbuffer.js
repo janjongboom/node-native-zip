@@ -44,6 +44,10 @@ function RollingBuffer (arg0, arg1, arg2) {
         
         offset += 4;        
     };
+    
+    this.getInternalBuffer = function () {
+        return this.buf;
+    };
 }
 
 module.exports = RollingBuffer;
