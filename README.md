@@ -88,3 +88,8 @@ The `compress` function is a method that transforms an incoming `Buffer` into a 
 
 The easiest to implement is probably deflate, because there is a [sample](https://github.com/Stuk/jszip/blob/master/jszip-deflate.js)
 in JSZip. You will only need to change the inner workings from string-based to Buffer-based.
+
+## Unzipping
+
+Unzipping is more complex because of all the different compression algorithms that you may
+encounter in the wild. So it's not covered. Use existing libraries for that.
