@@ -1,7 +1,8 @@
 /**
  * node.js zipping module
  * 
- * (c) Jan Jongboom, 2011
+ * Authors:
+ *      Jan Jongboom <janjongboom@gmail.com>
  */
 var RollingBuffer = require("./rollingbuffer");
 var fs = require("fs");
