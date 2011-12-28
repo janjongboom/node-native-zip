@@ -1,18 +1,90 @@
-# README for a newly created project.
+# node-native-zip
 
-There are a couple of things you should do first, before you can use all of Git's power:
+All the current ZIP solutions for node.js are wrappers around existing zip executables, spawning on demand.
+To all of you who rather have a native implementation of zip'ing in javascript there is node-native-zip.
+This package works with `Buffer` objects, which allows you to do complex in-memory stuff with the least
+amount of overhead.
 
-  * Add a remote to this project: in the Cloud9 IDE command line, you can execute the following commands
-    `git remote add [remote name] [remote url (eg. 'git@github.com:/ajaxorg/node_chat')]` [Enter]
-  * Create new files inside your project
-  * Add them to to Git by executing the following command
-    `git add [file1, file2, file3, ...]` [Enter]
-  * Create a commit which can be pushed to the remote you just added
-    `git commit -m 'added new files'` [Enter]
-  * Push the commit the remote
-    `git push [remote name] master` [Enter]
+It has been inspired by [JSZip](https://github.com/Stuk/jszip).
 
-That's it! If this doesn't work for you, please visit the excellent resources from [Github.com](http://help.github.com) and the [Pro Git](http://http://progit.org/book/) book.
-If you can't find your answers there, feel free to ask us via Twitter (@cloud9ide), [mailing list](groups.google.com/group/cloud9-ide) or IRC (#cloud9ide on freenode).
+## How to install
 
-Happy coding!
+Via NPM:
+
+    npm install node-native-zip
+    
+Via GIT:
+
+    git clone git://github.com/janjongboom/node-native-zip.git
+    
+## How to use
+
+There are two ways to feed files into a new .zip file. Either by adding `Buffer` objects, or by adding
+an array of files.
+
+### Adding Buffer objects
+
+    var fs = require("fs");
+    var zip = require("node-native-zip");
+    
+    var archive = new zip();
+    
+    archive.add("hello.txt", new Buffer("Hello world", "utf8"));
+    
+    var buffer = archive.toBuffer();
+    fs.writeFile("./test1.zip", buffer, function () {
+        console.log("Finished");
+    });
+    
+### Adding files from the file system
+
+    var fs = require("fs");
+    var zip = require("node-native-zip");
+    
+    var archive = new zip();
+    
+    archive.addFiles([ 
+        { name: "moehah.txt", path: "./test/moehah.txt" },
+        { name: "images/suz.jpg", path: "./test/images.jpg" }
+    ], function () {
+        var buff = archive.toBuffer();
+        
+        fs.writeFile("./test2.zip", buff, function () {
+            console.log("Finished");
+        });
+    }, function (err) {
+        console.log(err);
+    });
+    
+## API Reference
+
+There are three API methods:
+
+* `add(name, data)`, the 'name' is the name within the .zip file. To create a folder structure, add '/'
+* `addFiles(files, onComplete, onError)`, where files is an array containing objects in the form ` { name: "name/in/zip.file", path: "file-system.path" } `
+* `toBuffer()`, creates a new buffer and writes the zip file to it
+
+## Compression?
+
+The library currently doesn't do any compression. It stores the files via STORE. Main reason is that the
+compression call is synchronous at the moment, so the thread will block during compression, something to
+avoid.
+However, it is possible to add compression methods by implementing the following interface.
+
+    module.exports = (function () {
+        return {
+            indicator : [ 0x00, 0x00 ],
+            compress : function (content) {
+                // content is a Buffer object.
+                // you have to return a new Buffer too.
+            }
+        };
+    }());
+
+The `indicator` is an array consisting of two bytes indicating the compression technology.
+For example: `[ 0x00, 0x00]` is STORE, `[ 0x08, 0x00]` is DEFLATE.
+
+The `compress` function is a method that transforms an incoming `Buffer` into a new one.
+
+The easiest to implement is probably deflate, because there is a [sample](https://github.com/Stuk/jszip/blob/master/jszip-deflate.js)
+in JSZip. You will only need to change the inner workings from string-based to Buffer-based.

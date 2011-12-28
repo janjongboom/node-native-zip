@@ -1,0 +1,8 @@
+{
+  "name": "node-native-zip",
+  "description": "A ZIP library without external dependencies",
+  "author": "Jan Jongboom <janjongboom@gmail.com>",
+  "dependencies": { },
+  "devDependencies": { },
+  "engine": "node >= 0.4.9"
+}
