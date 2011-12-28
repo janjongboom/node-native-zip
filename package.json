@@ -1,5 +1,6 @@
 {
   "name": "node-native-zip",
+  "version": "1.0.0",
   "description": "A ZIP library without external dependencies",
   "author": "Jan Jongboom <janjongboom@gmail.com>",
   "dependencies": { },
