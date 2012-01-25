@@ -46,14 +46,14 @@ an array of files.
     archive.addFiles([ 
         { name: "moehah.txt", path: "./test/moehah.txt" },
         { name: "images/suz.jpg", path: "./test/images.jpg" }
-    ], function () {
+    ], function (err) {
+        if (err) return console.log("err while adding files", err);
+        
         var buff = archive.toBuffer();
         
         fs.writeFile("./test2.zip", buff, function () {
             console.log("Finished");
         });
-    }, function (err) {
-        console.log(err);
     });
     
 ## API Reference
@@ -61,7 +61,7 @@ an array of files.
 There are three API methods:
 
 * `add(name, data)`, the 'name' is the name within the .zip file. To create a folder structure, add '/'
-* `addFiles(files, onComplete, onError)`, where files is an array containing objects in the form ` { name: "name/in/zip.file", path: "file-system.path" } `
+* `addFiles(files, callback)`, where files is an array containing objects in the form ` { name: "name/in/zip.file", path: "file-system.path" } `. Callback is a function that takes 1 parameter 'err' which indicates whether an error occured.
 * `toBuffer()`, creates a new buffer and writes the zip file to it
 
 ## Compression?
