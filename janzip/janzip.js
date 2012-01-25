@@ -1,8 +1,7 @@
 /**
  * node.js zipping module
  * 
- * Authors:
- *      Jan Jongboom <janjongboom@gmail.com>
+ * (c) Jan Jongboom, 2011
  */
 var RollingBuffer = require("./rollingbuffer");
 var fs = require("fs");
@@ -93,30 +92,34 @@ var Zip = function () {
          * Add multiple files to the current archive.
          * Pass in an array containing { name: "", path: "" }
          */
-        function addFiles (filenames, onCompleted, onError) {
+        function addFiles (filenames, callback) {
             var counter = 0;
-            var callback = function () {
+            
+            var fileErr = null;
+            var onFileRead = function (err) {
+                if (err) fileErr = err;
+                
                 if (++counter === filenames.length) {
                     clearTimeout(expirationTimer);
-                    onCompleted();
+                    return callback && callback(fileErr);
                 }
             };
             
             filenames.forEach(function (f) {
                 fs.readFile(f.path, function (err, data) {
                     if (err) {
-                        onError(err);
+                        return onFileRead(err);
                     }
                     else {
                         add (f.name, data);
+                        onFileRead();
                     }
-                    callback();
                 });
             });
             
             // there is a 1 minute expiration timer running
             var expirationTimer = setTimeout(function () {
-                onError("Timeout reached when adding files");
+                return callback && callback("Timeout reached when adding files");
             }, 60 * 1000);
         }
         
