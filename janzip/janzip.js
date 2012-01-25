@@ -4,7 +4,7 @@
  * (c) Jan Jongboom, 2011
  */
 var RollingBuffer = require("./rollingbuffer");
-var fs = require("fs");
+var fs = require("./throttlefs");
  
 var Zip = function () {
     var _self = this;
