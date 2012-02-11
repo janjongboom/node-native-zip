@@ -1,30 +1,37 @@
 var fs = require("fs");
 var zip = require("./index");
 
+
+
+
 (function () {
     var archive = new zip();
     
-    archive.add("hello.txt", new Buffer("Hello world", "utf8"));
+    archive.add("hello.txt", new Buffer("Hello world", "utf8"), 'deflate');
     
-    var buffer = archive.toBuffer();
-    fs.writeFile("./test1.zip", buffer, function () {
-        console.log("Finished");
+    var buffer = archive.toBuffer(function(result){
+      fs.writeFile("./test1.zip", result, function () {
+          console.log("Finished");
+      });
     });
-})
+
+})();
 
 (function () {
     var zip = require("./index");
     
     var archive = new zip();
     archive.addFiles([ 
-        { name: "moehah.txt", path: "./test/moehah.txt" },
-        { name: "images/sam.jpg", path: "./test/images.jpg" }
+        { name: "moehah.txt", path: "./test/moehah.txt", compression: 'store' },
+        { name: "images/sam.jpg", path: "./test/images.jpg", compression: 'store' }
     ], function () {
-        var buff = archive.toBuffer();
-        
-        fs.writeFile("./test_new.zip", buff, function () {
-            console.log("im finished");
+        var buff = archive.toBuffer(function(result){
+          fs.writeFile("./test_new.zip", result, function () {
+              console.log("im finished");
+          });
         });
+        
+
     }, function (err) {
         console.log(err);
     });

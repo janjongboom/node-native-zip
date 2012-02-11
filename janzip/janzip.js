@@ -5,6 +5,7 @@
  */
 var RollingBuffer = require("./rollingbuffer");
 var fs = require("./throttlefs");
+var zlib = require('zlib');
  
 var Zip = function () {
     var _self = this;
@@ -84,8 +85,12 @@ var Zip = function () {
          * @param {name} The name of the file (can include folder structure)
          * @param {data} A buffer containing the data
          */
-        function add (filename, data) {
-            files.push({ name: filename, data: data });
+        function add (filename, data, compression) {
+          if(compression === 'store') compression = store;
+          if(compression === 'deflate') compression = deflate;
+          if(!compression) compression = store; //fallback
+          
+          files.push({ name: filename, data: data, zipMethod: compression });
         }
         
         /**
@@ -111,7 +116,7 @@ var Zip = function () {
                         return onFileRead(err);
                     }
                     else {
-                        add (f.name, data);
+                        add (f.name, data, f.compression);
                         onFileRead();
                     }
                 });
@@ -126,65 +131,82 @@ var Zip = function () {
         /**
          * Returns the ZIP archive as a buffer object
          */
-        function toBuffer (zipMethod) {
-            zipMethod = zipMethod || store;
+        function toBuffer (callback) {
             
             var fileBuffers = [], dirBuffers = [];
             var fileOffset = 0;
             
-            files.map(function(file) {
-                var data = zipMethod.compress(file.data);
-                var fileHeader = getFileHeader(file, zipMethod.indicator, data);
-                            
-                // write files
-                var fileBuffer = new RollingBuffer(4 + fileHeader.length + file.name.length + data.length);
-                writeBytes(fileBuffer, [0x50, 0x4b, 0x03, 0x04]); // 4
-                fileBuffer.appendBuffer(fileHeader); // hmm...
-                fileBuffer.write(file.name, "ascii");
-                fileBuffer.appendBuffer(data);
             
-                // now create dir
-                var dirBuffer = new RollingBuffer(4 + 2 + fileHeader.length + 6 + 4 + 4 + file.name.length);
-                writeBytes(dirBuffer, [0x50, 0x4b, 0x01, 0x02]);
-                writeBytes(dirBuffer, [0x14, 0x00]);
-                dirBuffer.appendBuffer(fileHeader);
-                // comment length, disk start, file attributes
-                writeBytes(dirBuffer, [0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
-                // external file attributes, @todo
-                writeBytes(dirBuffer, [0x00, 0x00, 0x00, 0x00]);
-                // relative offset of local header
-                dirBuffer.writeInt32(fileOffset);
-                // file name
-                dirBuffer.write(file.name, "ascii");
+            var finishedCompressing = function(){
+              var totalDirLength = getTotalBufLength(dirBuffers);
+              var totalFileLength = getTotalBufLength(fileBuffers);
+
+              var dirEnd = new RollingBuffer(8 + 2 + 2 + 4 + 4 + 2);
+              writeBytes(dirEnd, [0x50, 0x4b, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00]);
+              // total number of entries
+              dirEnd.writeInt16(fileBuffers.length);
+              dirEnd.writeInt16(fileBuffers.length);
+              // directory lengths
+              dirEnd.writeInt32(totalDirLength);
+              // file lengths
+              dirEnd.writeInt32(totalFileLength);
+              // and the end of file
+              writeBytes(dirEnd, [0x00, 0x00]);
+
+              var buffer = new RollingBuffer(totalFileLength + totalDirLength + dirEnd.length);
+              fileBuffers.forEach(function (b) { buffer.appendBuffer(b); });
+              dirBuffers.forEach(function (b) { buffer.appendBuffer(b); });
+              buffer.appendBuffer(dirEnd);
+
+              callback(buffer.getInternalBuffer());
+            };
             
-                // update offset
-                fileOffset += fileBuffer.length;
-            
-                fileBuffers.push(fileBuffer);
-                dirBuffers.push(dirBuffer);
-            });
-            
-            var totalDirLength = getTotalBufLength(dirBuffers);
-            var totalFileLength = getTotalBufLength(fileBuffers);
-            
-            var dirEnd = new RollingBuffer(8 + 2 + 2 + 4 + 4 + 2);
-            writeBytes(dirEnd, [0x50, 0x4b, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00]);
-            // total number of entries
-            dirEnd.writeInt16(fileBuffers.length);
-            dirEnd.writeInt16(fileBuffers.length);
-            // directory lengths
-            dirEnd.writeInt32(totalDirLength);
-            // file lengths
-            dirEnd.writeInt32(totalFileLength);
-            // and the end of file
-            writeBytes(dirEnd, [0x00, 0x00]);
-            
-            var buffer = new RollingBuffer(totalFileLength + totalDirLength + dirEnd.length);
-            fileBuffers.forEach(function (b) { buffer.appendBuffer(b); });
-            dirBuffers.forEach(function (b) { buffer.appendBuffer(b); });
-            buffer.appendBuffer(dirEnd);
-            
-            return buffer.getInternalBuffer();
+            //files.map(function(file) {
+            var compressFiles = function(file, files, idx){
+                var zipMethod = file.zipMethod;
+                
+                zipMethod.compress(file.data, function(data){
+                   var fileHeader = getFileHeader(file, zipMethod.indicator, data);
+
+                    // write files
+                    var fileBuffer = new RollingBuffer(4 + fileHeader.length + file.name.length + data.length);
+                    writeBytes(fileBuffer, [0x50, 0x4b, 0x03, 0x04]); // 4
+                    fileBuffer.appendBuffer(fileHeader); // hmm...
+                    fileBuffer.write(file.name, "ascii");
+                    fileBuffer.appendBuffer(data);
+
+                    // now create dir
+                    var dirBuffer = new RollingBuffer(4 + 2 + fileHeader.length + 6 + 4 + 4 + file.name.length);
+                    writeBytes(dirBuffer, [0x50, 0x4b, 0x01, 0x02]);
+                    writeBytes(dirBuffer, [0x14, 0x00]);
+                    dirBuffer.appendBuffer(fileHeader);
+                    // comment length, disk start, file attributes
+                    writeBytes(dirBuffer, [0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+                    // external file attributes, @todo
+                    writeBytes(dirBuffer, [0x00, 0x00, 0x00, 0x00]);
+                    // relative offset of local header
+                    dirBuffer.writeInt32(fileOffset);
+                    // file name
+                    dirBuffer.write(file.name, "ascii");
+
+                    // update offset
+                    fileOffset += fileBuffer.length;
+
+                    fileBuffers.push(fileBuffer);
+                    dirBuffers.push(dirBuffer);
+                    //increment index
+                    idx+=1;
+
+                    if(idx >= files.length){
+                      finishedCompressing(); //done
+                    }
+                    else{
+                      compressFiles(files[idx], files, idx);
+                    }
+                });
+                //var data = zipMethod.compress(file.data);
+            };
+            compressFiles(files[0], files, 0);
         }
         
         return {
@@ -205,10 +227,22 @@ module.exports = Zip;
 var store = (function () {
    return {
        indicator : [ 0x00, 0x00 ],
-       compress : function (content) {
-          return content;
+       compress : function (content, callback) {
+          callback(content);
        }
    };
+}());
+// ====== Deflate zipping method ======
+var deflate = (function () {
+  return {
+    indicator : [ 0x08, 0x00 ],
+    compress : function (content, callback) {
+      zlib.deflateRaw(content, function(err, buffer){
+        if(err) throw err;
+        callback(buffer);
+      });
+    }
+  };
 }());
 
 // ====== Helper functions ======
