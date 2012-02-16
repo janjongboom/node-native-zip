@@ -106,7 +106,7 @@ var Zip = function () {
             };
             
             if (!filenames.length) {
-              return callback && callback(fileErr);
+                return callback && callback(fileErr);
             }
             
             filenames.forEach(function (f) {
