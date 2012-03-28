@@ -1,0 +1,68 @@
+Hi I'm Jan from Cloud9 IDE, and today we are releasing a great addition to our cloud deployment stack with the addition of Windows Azure.
+
+Here's a demo: let's open node_chat, one of the de-facto demo application for node.js. I already made this Cloud9 compatible by removing the globals and letting it listen to process.env.PORT.
+
+To deploy this application to the reliable cloud services at Microsoft, we switch to the 'Deploy' panel and hit the '+' icon. In addition to Heroku and Joyent we now offer Windows Azure in the target list.
+
+For authentication, we require you to download your Azure credentials once by clicking the green button. 
+
+If you don't have an account yet, you can sign up for the completely free 3 month trial.
+
+Now sign in and wait for the download to get started. This file contains all the relevant information to allow us to deploy to your account.
+
+Hereafter select the file on your file system, and upload it back to Cloud9. Because downloading the file takes a while we'll grab one I downloaded earlier.
+
+After around 20 seconds, you will see your existing applications, and can deploy to them with one click; but we'll add a new one.
+
+Give your application a unique name, choose the number of instances you want the app to run on, which is the great part of running apps in the cloud. Select an operating system and a data center.
+
+Now the deploy target is saved and is ready for action!
+
+Click the target, choose 'Production' and hit 'Deploy'. The first time we'll auto create a configuration file for you. Now we'll ask for another configuration file, and present you with a wizard. Choose 'Extra Small' and hit 'Create'. Your deploy will now start.
+
+For those familiar with Cloud9, we have added status information for the deploys, both inline and in the Console. This has been added for Heroku and Joyent deploys as well.
+
+Because fresh Azure deployments can take up to 10 minutes we'll take a short break and come back shortly.
+
+
+
+
+----
+
+We're back and the application has been deployed. The status of the deploy target has gone back to normal and is once again ready for action.
+
+You can now reach your applications in two ways, either by clicking the target and clicking on the 'Url' or by clicking on the link in your console.
+
+If we now hit it you'll see your application running load balanced on two Virtual Machines in the Windows Azure data center.
+
+Happy coding and happy deploying!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
