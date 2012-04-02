@@ -21,7 +21,7 @@ var Zip = function () {
         var evix = 0;
         function dispatchEvent(event, data) {
             if (++evix > maxevents) process.exit(0);
-            
+
             (callbacks[event] || []).forEach(function (cb) {
                 if (typeof cb === "function")
                     cb(data);
@@ -74,13 +74,14 @@ var Zip = function () {
         /** 
          * Generate a file header (as a buffer)
          */
-        function getFileHeader (file, compressIndicator, compressedData) {
+        function getFileHeader (fileName, compressIndicator) {
             var dt = getDateTimeHeaders(new Date());
             
             var header = new RollingBuffer(26);
             
             // version + bit flag
-            writeBytes(header, [ 0x0A, 0x00, 0x00, 0x03 ]);
+            writeBytes(header, [ 0x0A, 0x00 ]);
+            writeBytes(header, [ 0x08, 0x08 ]);
             // compression method @todo multiple methods, this is STORE
             writeBytes(header, compressIndicator);
             // file time & date
@@ -93,11 +94,50 @@ var Zip = function () {
             // uncompressed size
             header.writeInt32(0); //file.data.length);
             // file name length
-            header.writeInt16(file.name.length);
+            header.writeInt16(fileName.length);
             // fill
             writeBytes(header, [ 0x00, 0x00 ]);
             
             return header;
+        }
+
+        function getDirectoryFileHeader (fileName, crc, compressedSize, uncompressedSize, compressIndicator) {
+            var dt = getDateTimeHeaders(new Date());
+            
+            var header = new RollingBuffer(26);
+            
+            // version + bit flag
+            writeBytes(header, [ 0x0A, 0x00 ]);
+            writeBytes(header, [ 0x08, 0x08 ]);
+            // compression method
+            writeBytes(header, compressIndicator);
+            // file time & date
+            header.writeInt16(dt.time);
+            header.writeInt16(dt.date);
+            
+            header.writeInt32(crc);
+            header.writeInt32(compressedSize);
+            header.writeInt32(uncompressedSize); 
+            
+            // file name length
+            header.writeInt16(fileName.length);
+            // fill
+            writeBytes(header, [ 0x00, 0x00 ]);
+            
+            return header;
+        }
+        
+        function getStreamBytes (crc, compressedLength, uncompressedLength) {
+            var eof = new RollingBuffer(4 + 4 + 4 + 4);
+            writeBytes(eof, [ 0x08, 0x07, 0x4b, 0x50 ]);
+            //crc32
+            eof.writeInt32(crc);//crcInstance.calculate());
+            // compressed size
+            eof.writeInt32(compressedLength);//dirObj.fileLength);
+            // uncompressed
+            eof.writeInt32(uncompressedLength);//dirObj.fileLength);        
+            
+            return eof;
         }
                 
         /**
@@ -137,7 +177,7 @@ var Zip = function () {
             function writeFiles () {
                 // first write all the files
                 async.forEachLimit(files, 1, function (file, next) {
-                    var fileHeader = getFileHeader(file, zipMethod.indicator);
+                    var fileHeader = getFileHeader(file.name, zipMethod.indicator);
                                 
                     // write files
                     var fileBuffer = new RollingBuffer(4 + fileHeader.length + file.name.length);
@@ -145,12 +185,12 @@ var Zip = function () {
                     fileBuffer.appendBuffer(fileHeader); // hmm...
                     fileBuffer.write(file.name, "ascii");
                     
-                    console.log("dispatch from writefiles");
+                    console.log("dispatch from writefiles", fileBuffer.getInternalBuffer());
                     dispatchEvent("data", fileBuffer.getInternalBuffer());
                     
                     var dirObj = {
-                        fileLength: fileBuffer.length,
-                        fileHeader: fileHeader,
+                        headerLength: fileBuffer.length,
+                        fileLength: 0,
                         fileName: file.name
                     };
                     
@@ -158,6 +198,7 @@ var Zip = function () {
                     
                     zipMethod.compress(file.path, function data (buffer) {
                         dirObj.fileLength += buffer.length;
+                        console.log("fileLength", dirObj.fileLength);
                         crcInstance.onData(buffer);
                         
                         console.log("dispatch from compress");
@@ -165,13 +206,18 @@ var Zip = function () {
                     }, function error(err) {
                         return next(err);
                     }, function close() {
-                        var eof = new RollingBuffer(4 + 4 + 4);
+                        var eof = getStreamBytes(crcInstance.calculate(), dirObj.fileLength, dirObj.fileLength);/* new RollingBuffer(4 + 4 + 4 + 4);
+                        writeBytes(eof, [ 0x08, 0x07, 0x4b, 0x50 ]);
                         //crc32
                         eof.writeInt32(crcInstance.calculate());
                         // compressed size
                         eof.writeInt32(dirObj.fileLength);
                         // uncompressed
-                        eof.writeInt32(dirObj.fileLength);
+                        eof.writeInt32(dirObj.fileLength);*/
+                        
+                        dispatchEvent("data", eof.getInternalBuffer());
+                        
+                        dirObj.crc = crcInstance.calculate();
                         
                         dirs.push(dirObj);
                         
@@ -193,12 +239,15 @@ var Zip = function () {
                 
                 dirs.forEach(function (dir) {
                 //async.forEachLimit(dirs, 1, function (dir, next) {
+                    var dirFileHeader = getDirectoryFileHeader (dir.fileName, dir.crc, dir.fileLength, dir.fileLength, zipMethod.indicator)
+                    console.log(dirFileHeader.getInternalBuffer());
+                
                     console.log("processing dir", dir, dirs.length);
                     // now create dir
-                    var dirBuffer = new RollingBuffer(4 + 2 + dir.fileHeader.length + 6 + 4 + 4 + dir.fileName.length);
+                    var dirBuffer = new RollingBuffer(4 + 2 + dirFileHeader.length + 6 + 4 + 4 + dir.fileName.length);
                     writeBytes(dirBuffer, [0x50, 0x4b, 0x01, 0x02]);
                     writeBytes(dirBuffer, [0x14, 0x00]);
-                    dirBuffer.appendBuffer(dir.fileHeader);
+                    dirBuffer.appendBuffer(dirFileHeader);
                     // comment length, disk start, file attributes
                     writeBytes(dirBuffer, [0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
                     // external file attributes, @todo
@@ -212,22 +261,19 @@ var Zip = function () {
                     dispatchEvent("data", dirBuffer.getInternalBuffer());
                 
                     // update offset
-                    fileOffset += dir.fileLength;
+                    // file length in bytes, plus header, plus the streaming bytes (16)
+                    fileOffset += (dir.fileLength + dir.headerLength + 16);
                     
                     totalDirLength += dirBuffer.length;
-                });  
-                /*    next();
-                }, function (err) {
-                    if (err) return dispatchEvent("error", err);
-                */    
+                });
+                
                 writeEof();
-                //});
             }
             
             function writeEof () {
                 var totalFileLength = 0;
                 dirs.forEach(function (d) {
-                    totalFileLength += d.fileLength;
+                    totalFileLength += (d.fileLength + d.headerLength);
                 });
                 
                 var dirEnd = new RollingBuffer(8 + 2 + 2 + 4 + 4 + 2);

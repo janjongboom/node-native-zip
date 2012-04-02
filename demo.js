@@ -17,16 +17,18 @@ var zip = require("./index");
     
     var archive = new zip();
     archive.addFiles([ 
-        { name: "moehah.txt", path: "./test/auction.txt" },
-        { name: "images/sam.jpg", path: "./test/sam.jpg" }
+        { name: "test.txt", path: "./test/auction.txt" },
+        { name: "sam.jpg", path: "./test/sam.jpg" }
     ]);
     
     var isclosed = false;
     
     var s = fs.createWriteStream(__dirname + "/test.zip");
 
-    archive.toBuffer();
+    var l = 0;
     archive.on("data", function (data) {
+        l += data.length;
+        console.log("write", l);
         s.write(data);
         //console.log("data", data.length);
         //if (isclosed) console.trace();
@@ -39,6 +41,7 @@ var zip = require("./index");
         isclosed = true;
         console.log("close");
     });
+    archive.toBuffer();
         
         /*
         fs.writeFile("./test_new.zip", buff, function () {
