@@ -59,12 +59,15 @@ var Zip = function () {
             var header = new RollingBuffer(26);
             
             // version + bit flag
-            writeBytes(header, [ 0x0A, 0x00, 0x00, 0x00 ]);
+            writeBytes(header, [ 0x0A, 0x00, parseInt("0010", 2), parseInt("0000", 2) ]);
             // compression method @todo multiple methods, this is STORE
             writeBytes(header, compressIndicator);
             // file time & date
             header.writeInt16(dt.time);
             header.writeInt16(dt.date);
+            
+            // crc, and sizes are set afterwards
+            
             // crc32
             header.writeInt32(crc32(compressedData));
             // compressed size
@@ -141,11 +144,21 @@ var Zip = function () {
                 var fileHeader = getFileHeader(file, zipMethod.indicator, data);
                             
                 // write files
-                var fileBuffer = new RollingBuffer(4 + fileHeader.length + file.name.length + data.length);
+                var fileBuffer = new RollingBuffer(4 + fileHeader.length + file.name.length + data.length + (4*4));
                 writeBytes(fileBuffer, [0x50, 0x4b, 0x03, 0x04]); // 4
                 fileBuffer.appendBuffer(fileHeader); // hmm...
                 fileBuffer.write(file.name, "ascii");
                 fileBuffer.appendBuffer(data);
+                
+                // 0x08074b50
+                writeBytes(fileBuffer, [ 0x08, 0x07, 0x4b, 0x50 ]);
+                
+                // crc32
+                fileBuffer.writeInt32(crc32(data));
+                // compressed size
+                fileBuffer.writeInt32(data.length);
+                // uncompressed size
+                fileBuffer.writeInt32(file.data.length);
             
                 // now create dir
                 var dirBuffer = new RollingBuffer(4 + 2 + fileHeader.length + 6 + 4 + 4 + file.name.length);

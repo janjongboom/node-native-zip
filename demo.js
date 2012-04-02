@@ -1,24 +1,26 @@
 var fs = require("fs");
 var zip = require("./index");
 
-(function () {
-    var archive = new zip();
-    
-    archive.add("hello.txt", new Buffer("Hello world", "utf8"));
-    
-    var buffer = archive.toBuffer();
-    fs.writeFile("./test1.zip", buffer, function () {
-        console.log("Finished");
-    });
-})
+//(function () {
+//    var archive = new zip();
+//    
+//    archive.add("hello.txt", new Buffer("Hello world", "utf8"));
+//    
+//    var buffer = archive.toBuffer();
+//    fs.writeFile("./test1.zip", buffer, function () {
+//        console.log("Finished");
+//    });
+//})
+
+
 
 (function () {
     var zip = require("./index");
     
     var archive = new zip();
     archive.addFiles([ 
-        { name: "moehah.txt", path: "./test/moehah.txt" },
-        { name: "images/sam.jpg", path: "./test/images.jpg" }
+        { name: "test.txt", path: "./test/test.txt" }//,
+        //{ name: "images/sam.jpg", path: "./test/images.jpg" }
     ], function () {
         var buff = archive.toBuffer();
         
