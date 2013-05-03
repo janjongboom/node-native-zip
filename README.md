@@ -1,3 +1,8 @@
+# This project has been abandoned in favor of node-archiver
+
+If you're in need of a non-binary ZIP library for node.js, I'd like to redirect you to 
+[node-archiver](https://github.com/ctalkington/node-archiver).
+
 # node-native-zip
 
 All the current ZIP solutions for node.js are wrappers around existing zip executables, spawning on demand.
