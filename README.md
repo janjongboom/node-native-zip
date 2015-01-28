@@ -28,7 +28,7 @@ There are two ways to feed files into a new .zip file. Either by adding `Buffer`
 an array of files.
 
 ### Adding Buffer objects
-
+```js
     var fs = require("fs");
     var zip = require("node-native-zip");
     
@@ -40,9 +40,9 @@ an array of files.
     fs.writeFile("./test1.zip", buffer, function () {
         console.log("Finished");
     });
-    
+```    
 ### Adding files from the file system
-
+```js
     var fs = require("fs");
     var zip = require("node-native-zip");
     
@@ -60,7 +60,7 @@ an array of files.
             console.log("Finished");
         });
     });
-    
+```    
 ## API Reference
 
 There are three API methods:
@@ -75,7 +75,7 @@ The library currently doesn't do any compression. It stores the files via STORE.
 compression call is synchronous at the moment, so the thread will block during compression, something to
 avoid.
 However, it is possible to add compression methods by implementing the following interface.
-
+```js
     module.exports = (function () {
         return {
             indicator : [ 0x00, 0x00 ],
@@ -85,7 +85,7 @@ However, it is possible to add compression methods by implementing the following
             }
         };
     }());
-
+```
 The `indicator` is an array consisting of two bytes indicating the compression technology.
 For example: `[ 0x00, 0x00]` is STORE, `[ 0x08, 0x00]` is DEFLATE.
 
