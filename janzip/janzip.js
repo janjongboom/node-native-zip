@@ -75,7 +75,7 @@ var Zip = function () {
             // uncompressed size
             header.writeInt32(file.data.length);
             // file name length
-            header.writeInt16(file.name.length);
+            header.writeInt16((new Buffer(file.name,"utf8")).length);
             // fill
             writeBytes(header, [ 0x00, 0x00 ]);
             
@@ -144,10 +144,10 @@ var Zip = function () {
                 var fileHeader = getFileHeader(file, zipMethod.indicator, data);
                             
                 // write files
-                var fileBuffer = new RollingBuffer(4 + fileHeader.length + file.name.length + data.length + (4*4));
+                var fileBuffer = new RollingBuffer(4 + fileHeader.length + (new Buffer(file.name,"utf8")).length + data.length + (4*4));
                 writeBytes(fileBuffer, [0x50, 0x4b, 0x03, 0x04]); // 4
                 fileBuffer.appendBuffer(fileHeader); // hmm...
-                fileBuffer.write(file.name, "ascii");
+                fileBuffer.write(file.name, "utf8");
                 fileBuffer.appendBuffer(data);
                 
                 // 0x08074b50
@@ -161,7 +161,7 @@ var Zip = function () {
                 fileBuffer.writeInt32(file.data.length);
             
                 // now create dir
-                var dirBuffer = new RollingBuffer(4 + 2 + fileHeader.length + 6 + 4 + 4 + file.name.length);
+                var dirBuffer = new RollingBuffer(4 + 2 + fileHeader.length + 6 + 4 + 4 + (new Buffer(file.name,"utf8")).length);
                 writeBytes(dirBuffer, [0x50, 0x4b, 0x01, 0x02]);
                 writeBytes(dirBuffer, [0x14, 0x00]);
                 dirBuffer.appendBuffer(fileHeader);
@@ -172,7 +172,7 @@ var Zip = function () {
                 // relative offset of local header
                 dirBuffer.writeInt32(fileOffset);
                 // file name
-                dirBuffer.write(file.name, "ascii");
+                dirBuffer.write(file.name, "utf8");
             
                 // update offset
                 fileOffset += fileBuffer.length;
